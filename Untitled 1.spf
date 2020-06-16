@@ -1,0 +1,525 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ContentFilters</key>
+	<dict/>
+	<key>auto_connect</key>
+	<true/>
+	<key>data</key>
+	<dict>
+		<key>connection</key>
+		<dict>
+			<key>database</key>
+			<string>covid19</string>
+			<key>host</key>
+			<string>127.0.0.1</string>
+			<key>kcid</key>
+			<string>-4569913199579473802</string>
+			<key>name</key>
+			<string>127.0.0.1</string>
+			<key>rdbms_type</key>
+			<string>mysql</string>
+			<key>sslCACertFileLocation</key>
+			<string></string>
+			<key>sslCACertFileLocationEnabled</key>
+			<integer>0</integer>
+			<key>sslCertificateFileLocation</key>
+			<string></string>
+			<key>sslCertificateFileLocationEnabled</key>
+			<integer>0</integer>
+			<key>sslKeyFileLocation</key>
+			<string></string>
+			<key>sslKeyFileLocationEnabled</key>
+			<integer>0</integer>
+			<key>type</key>
+			<string>SPTCPIPConnection</string>
+			<key>useSSL</key>
+			<integer>0</integer>
+			<key>user</key>
+			<string>root</string>
+		</dict>
+		<key>session</key>
+		<dict>
+			<key>connectionEncoding</key>
+			<string>utf8</string>
+			<key>contentFilterV2</key>
+			<dict>
+				<key>children</key>
+				<array/>
+				<key>filterClass</key>
+				<string>groupNode</string>
+				<key>isConjunction</key>
+				<true/>
+			</dict>
+			<key>contentPageNumber</key>
+			<integer>1</integer>
+			<key>contentSelection</key>
+			<data>
+			YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0
+			b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRk
+			YXRhgAGoCwwXGBkaHiVVJG51bGzTDQ4PEBMWV05TLmtleXNaTlMu
+			b2JqZWN0c1YkY2xhc3OiERKAAoADohQVgASABYAHVHR5cGVUcm93
+			c18QHVNlbGVjdGlvbkRldGFpbFR5cGVOU0luZGV4U2V00hsPHB1c
+			TlNSYW5nZUNvdW50EACABtIfICEiWiRjbGFzc25hbWVYJGNsYXNz
+			ZXNaTlNJbmRleFNldKIjJFpOU0luZGV4U2V0WE5TT2JqZWN00h8g
+			JidcTlNEaWN0aW9uYXJ5oiYkAAgAEQAaACQAKQAyADcASQBMAFEA
+			UwBcAGIAaQBxAHwAgwCGAIgAigCNAI8AkQCTAJgAnQC9AMIAzwDR
+			ANMA2ADjAOwA9wD6AQUBDgETASAAAAAAAAACAQAAAAAAAAAoAAAA
+			AAAAAAAAAAAAAAABIw==
+			</data>
+			<key>contentSortColIsAsc</key>
+			<true/>
+			<key>contentViewport</key>
+			<string>{{0, 0}, {729, 506}}</string>
+			<key>isToolbarVisible</key>
+			<true/>
+			<key>queries</key>
+			<string>DROP TABLE IF EXISTS COVID19_country_day;
+
+CREATE TABLE COVID19_country_day
+AS
+SELECT TRIM(country_region) AS country, STR_TO_DATE(date_reported, '%m-%d-%Y') AS date_reported, IFNULL(SUM(cnt_confirmed),0) AS cnt_cum_confirmed
+  FROM covid19_daily_reports 
+ WHERE 1=1
+   AND country_region IS NOT NULL
+ GROUP BY country_region, STR_TO_DATE(date_reported, '%m-%d-%Y')
+;
+
+/* SEQ generation */
+CREATE TABLE COVID19_country_day_seq
+AS
+SELECT TRIM(a.country) AS country, a.date_reported, a.cnt_cum_confirmed, COUNT(*) country_seq
+  FROM COVID19_country_day a, COVID19_country_day b
+ WHERE a.country = b.country
+   AND a.date_reported &gt;= b.date_reported
+ GROUP BY a.country, a.date_reported, a.cnt_cum_confirmed; 
+
+DROP TABLE IF EXISTS COVID19_country_day_summary;
+
+/* Lead/Lag : Windows/Analytic Functions */
+CREATE TABLE COVID19_country_day_summary
+AS
+SELECT a.*, (a.cnt_cum_confirmed - IFNULL(b.cnt_cum_confirmed,0)) AS cnt_new_confirmed
+  FROM COVID19_country_day_seq a
+  LEFT OUTER JOIN COVID19_country_day_seq b
+    ON a.country = b.country
+   AND a.country_seq = b.country_seq+1
+ ORDER BY 1,2,4
+;   </string>
+			<key>table</key>
+			<string>COVID19_country_day</string>
+			<key>view</key>
+			<string>SP_VIEW_CUSTOMQUERY</string>
+			<key>windowVerticalDividerPosition</key>
+			<real>220</real>
+		</dict>
+	</dict>
+	<key>encrypted</key>
+	<false/>
+	<key>format</key>
+	<string>connection</string>
+	<key>queryFavorites</key>
+	<array/>
+	<key>queryHistory</key>
+	<array>
+		<string>CREATE TABLE IF NOT EXISTS COVID19_country_daywise_summary_p
+as
+select a.*, (a.cum_confirmed - ifnull(b.cum_confirmed,0)) as new_confirmed,
+(a.cum_recovered - ifnull(b.cum_recovered,0)) as new_recovered
+from COVID19_country_daywise_seq_p a
+left outer join COVID19_country_daywise_seq_p b
+ON a.country = b.country
+and a.country_seq = b.country_seq+1
+order by 1,2,4;
+select * from COVID19_country_daywise_summary_p</string>
+		<string>CREATE TABLE IF NOT EXISTS COVID19_country_daywise_seq_p
+as
+select trim(a.country) as country, a.date_reported, a.cum_confirmed, a.cum_recovered, count(*) country_seq
+from COVID19_country_daywise_p a, COVID19_country_daywise_p b
+where a.country = b.country
+and a.date_reported &gt;= b.date_reported
+group by a.country, a.date_reported,a.cum_confirmed,a.cum_recovered;
+select * from COVID19_country_daywise_seq_p</string>
+		<string>CREATE TABLE IF NOT EXISTS COVID19_country_daywise_seq_p
+as
+select trim(a.country) as country, a.date_reported, a.cum_confirmed, a.cum_recovered, count(*) country_seq
+from COVID19_country_daywise a, COVID19_country_daywise b
+where a.country = b.country
+and a.date_reported &gt;= b.date_reported
+group by a.country, a.date_reported,a.cum_confirmed,a.cum_recovered</string>
+		<string>DROP TABLE IF EXISTS COVID19_country_daywise_p;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise_p
+as
+select trim(country_region) as country, str_to_date(date_reported, '%m-%d-%Y') as date_reported,
+ifnull(sum(cnt_confirmed),0) as cum_confirmed,
+ifnull(sum(cnt_recovered),0) as cum_recovered from covid19_daily_report
+where 1=1
+and country_region is not null
+group by country_region, str_to_date(date_reported, '%m-%d-%Y')</string>
+		<string>DROP TABLE IF EXISTS COVID19_country_daywise;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise
+as
+select trim(country_region) as country, str_to_date(date_reported, '%m-%d-%Y') as date_reported,
+ifnull(sum(cnt_confirmed),0) as cum_confirmed,
+ifnull(sum(cnt_recovered),0) as cum_recovered from covid19_daily_report
+where 1=1
+and country_region is not null
+group by country_region, str_to_date(date_reported, '%m-%d-%Y')</string>
+		<string># Query for confirmed cases and recovered cases
+
+DROP TABLE IF EXISTS COVID19_country_daywise;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise
+as
+select trim(country_region) as country, str_to_date(date_reported, '%m-%d-%Y') as date_reported,
+ifnull(sum(confirmed),0) as cum_confirmed,
+ifnull(sum(recovered),0) as cum_recovered from covid19_daily_report
+where 1=1
+and country_region is not null
+group by country_region, str_to_date(date_reported, '%m-%d-%Y');
+select * from COVID19_country_daywise;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise_seq
+as
+select trim(a.country) as country, a.date_reported, a.cum_confirmed, a.cum_recovered, count(*) country_seq
+from COVID19_country_daywise a, COVID19_country_daywise b
+where a.country = b.country
+and a.date_reported &gt;= b.date_reported
+group by a.country, a.date_reported,a.cum_confirmed,a.cum_recovered;
+select * from COVID19_country_daywise_seq;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise_summary
+as
+select a.*, (a.cum_confirmed - ifnull(b.cum_confirmed,0)) as new_confirmed,
+(a.cum_recovered - ifnull(b.cum_recovered,0)) as new_recovered
+from COVID19_country_daywise_seq a
+left outer join COVID19_country_daywise_seq b
+ON a.country = b.country
+and a.country_seq = b.country_seq+1
+order by 1,2,4;
+select * from COVID19_country_daywise_summary</string>
+		<string># Query for confirmed cases and recovered cases
+
+DROP TABLE IF EXISTS COVID19_country_daywise;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise
+as
+select trim(country_region) as country, str_to_date(date_reported, '%m-%d-%Y') as date_reported,
+ifnull(sum(confirmed),0) as cum_confirmed,
+ifnull(sum(recovered),0) as cum_recovered from covid19_daily_report
+where 1=1
+and country_region is not null
+group by country_region, str_to_date(date_reported, '%m-%d-%Y')</string>
+		<string># Query for confirmed cases and recovered cases
+
+DROP TABLE IF EXISTS COVID19_country_daywise;
+CREATE TABLE IF NOT EXISTS COVID19_country_daywise
+as
+select trim(country_region) as country, str_to_date(date_reported, '%m-%d-%Y') as date_reported,
+ifnull(sum(confirmed),0) as cum_confirmed,
+ifnull(sum(recovered),0) as cum_recovered from covid_19_daily_reports
+where 1=1
+and country_region is not null
+group by country_region, str_to_date(date_reported, '%m-%d-%Y')</string>
+		<string>CREATE TABLE COVID19_country_day_summary
+AS
+SELECT a.*, (a.cnt_cum_confirmed - IFNULL(b.cnt_cum_confirmed,0)) AS cnt_new_confirmed
+  FROM COVID19_country_day_seq a
+  LEFT OUTER JOIN COVID19_country_day_seq b
+    ON a.country = b.country
+   AND a.country_seq = b.country_seq+1
+ ORDER BY 1,2,4</string>
+		<string>/* SEQ generation */
+CREATE TABLE COVID19_country_day_seq
+AS
+SELECT TRIM(a.country) AS country, a.date_reported, a.cnt_cum_confirmed, COUNT(*) country_seq
+  FROM COVID19_country_day a, COVID19_country_day b
+ WHERE a.country = b.country
+   AND a.date_reported &gt;= b.date_reported
+ GROUP BY a.country, a.date_reported, a.cnt_cum_confirmed;
+DROP TABLE IF EXISTS COVID19_country_day_summary</string>
+		<string>CREATE TABLE COVID19_country_day
+AS
+SELECT TRIM(country_region) AS country, STR_TO_DATE(date_reported, '%m-%d-%Y') AS date_reported, IFNULL(SUM(cnt_confirmed),0) AS cnt_cum_confirmed
+  FROM covid19_daily_reports 
+ WHERE 1=1
+   AND country_region IS NOT NULL
+ GROUP BY country_region, STR_TO_DATE(date_reported, '%m-%d-%Y')</string>
+		<string>CREATE TABLE COVID19_country_day
+AS
+SELECT TRIM(country_region) AS country, STR_TO_DATE(date_reported, '%m-%d-%Y') AS date_reported, IFNULL(SUM(cnt_confirmed),0) AS cnt_cum_confirmed
+  FROM COVID19_daily_report 
+ WHERE 1=1
+   AND country_region IS NOT NULL
+ GROUP BY country_region, STR_TO_DATE(date_reported, '%m-%d-%Y')</string>
+		<string>DROP TABLE IF EXISTS COVID19_country_day;
+CREATE TABLE COVID19_country_day
+AS
+SELECT TRIM(country_region) AS country, STR_TO_DATE(date_reported, '%m-%d-%Y') AS date_reported, IFNULL(SUM(cnt_confirmed),0) AS cnt_cum_confirmed
+  FROM COVID19_daily_report 
+ WHERE 1=1
+   AND country_region IS NOT NULL
+ GROUP BY country_region, STR_TO_DATE(date_reported, '%m-%d-%Y')</string>
+		<string>SELECT	a.`DateSkey` AS `order_date_skey`
+		, f.`ship_date` AS `ship_date_skey`
+		, IFNULL(b.`customer_skey`,-1) AS customer_skey
+		, IFNULL(c.`product_skey`,-1) AS product_skey
+		, d.`junk_skey`
+		, f.`order_id`
+		, f.`unit_sales_amout`
+		, f.`sales_quantity`
+		, f.`discount_percent`
+		, f.`extended_sales_amount`
+FROM		
+	(
+	SELECT `order_date`
+		, `ship_date`
+		, `customer_id`
+		, `product_id`
+		, `order_id`
+		, `unit_sales_amout`
+		, `sales_quantity`
+		, `discount_percent`
+		, `extended_sales_amount`
+		, `ship_mode`
+	FROM `sales_transaction`
+	) f
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_date` a
+	ON f.`order_date` = a.`TheDate`
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_customer` b
+	ON f.`customer_id` = b.`customer_id`
+
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_product`c
+	ON f.`product_id` = c.`product_id`	
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_junk` d
+	ON f.`ship_mode` = d.`ship_mode`</string>
+		<string>SELECT IFNULL(d.DateSkey, 19000101) AS DateSkey
+     , IFNULL(c.CustomerSkey, -1) AS CustomerSkey
+     , f.InvoiceId
+     , f.InvoiceLineId
+     , f.UnitPrice
+     , f.`Quantity`
+     
+  FROM
+      (
+        SELECT a.InvoiceId
+             , b.InvoiceLineId
+             , a.CustomerId
+             , a.invoiceDate
+             , b.UnitPrice
+             , b.Quantity
+          FROM datamart.invoice a,
+               datamart.invoiceline b
+         WHERE a.invoiceid = b.invoiceid
+         
+      ) f
+ LEFT OUTER JOIN
+      datamart.dim_date d
+   ON f.invoiceDate = d.theDate
+   
+ LEFT OUTER JOIN
+      datamart.dim_customer c
+   ON f.CustomerId = c.CustomerId</string>
+		<string>SELECT	a.`DateSkey` AS `order_date_skey`
+		, f.`ship_date` AS `ship_date_skey`
+		, IFNULL(b.`customer_skey`,-1) AS customer_skey
+		, c.`product_skey`
+		, d.`junk_skey`
+		, f.`order_id`
+		, f.`unit_sales_amout`
+		, f.`sales_quantity`
+		, f.`discount_percent`
+		, f.`extended_sales_amount`
+FROM		
+	(
+	SELECT `order_date`
+		, `ship_date`
+		, `customer_id`
+		, `product_id`
+		, `order_id`
+		, `unit_sales_amout`
+		, `sales_quantity`
+		, `discount_percent`
+		, `extended_sales_amount`
+		, `ship_mode`
+	FROM `sales_transaction`
+	) f
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_date` a
+	ON f.`order_date` = a.`TheDate`
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_customer` b
+	ON f.`customer_id` = b.`customer_id`
+
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_product`c
+	ON f.`product_id` = c.`product_id`	
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_junk` d
+	ON f.`ship_mode` = d.`ship_mode`</string>
+		<string>SELECT	a.`DateSkey` AS `order_date_skey`
+		, f.`ship_date` AS `ship_date_skey`
+		, IFNULL(b.`customer_skey`,-1)
+		, c.`product_skey`
+		, d.`junk_skey`
+		, f.`order_id`
+		, f.`unit_sales_amout`
+		, f.`sales_quantity`
+		, f.`discount_percent`
+		, f.`extended_sales_amount`
+FROM		
+	(
+	SELECT `order_date`
+		, `ship_date`
+		, `customer_id`
+		, `product_id`
+		, `order_id`
+		, `unit_sales_amout`
+		, `sales_quantity`
+		, `discount_percent`
+		, `extended_sales_amount`
+		, `ship_mode`
+	FROM `sales_transaction`
+	) f
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_date` a
+	ON f.`order_date` = a.`TheDate`
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_customer` b
+	ON f.`customer_id` = b.`customer_id`
+
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_product`c
+	ON f.`product_id` = c.`product_id`	
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_junk` d
+	ON f.`ship_mode` = d.`ship_mode`</string>
+		<string>SELECT a.`DateSkey` AS `order_date_skey`
+		, f.`ship_date` AS `ship_date_skey`
+		, b.`customer_skey`
+		, c.`product_skey`
+		, d.`junk_skey`
+		, f.`order_id`
+		, f.`unit_sales_amout`
+		, f.`sales_quantity`
+		, f.`discount_percent`
+		, f.`extended_sales_amount`
+FROM		
+	(
+	SELECT `order_date`
+		, `ship_date`
+		, `customer_id`
+		, `product_id`
+		, `order_id`
+		, `unit_sales_amout`
+		, `sales_quantity`
+		, `discount_percent`
+		, `extended_sales_amount`
+		, `ship_mode`
+	FROM `sales_transaction`
+	) f
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_date` a
+	ON f.`order_date` = a.`TheDate`
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_customer` b
+	ON f.`customer_id` = b.`customer_id`
+
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_product`c
+	ON f.`product_id` = c.`product_id`	
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_junk` d
+	ON f.`ship_mode` = d.`ship_mode`</string>
+		<string>SELECT a.`DateSkey` AS `order_date_skey`
+		, f.`ship_date` AS `ship_date_skey`
+		, b.`customer_skey`
+		, c.`product_skey`
+		, d.`junk_skey`
+FROM		
+	(
+	SELECT `order_date`
+		, `ship_date`
+		, `customer_id`
+		, `product_id`
+		, `order_id`
+		, `unit_sales_amout`
+		, `sales_quantity`
+		, `discount_percent`
+		, `extended_sales_amount`
+		, `ship_mode`
+	FROM `sales_transaction`
+	) f
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_date` a
+	ON f.`order_date` = a.`TheDate`
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_customer` b
+	ON f.`customer_id` = b.`customer_id`
+
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_product`c
+	ON f.`product_id` = c.`product_id`	
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_junk` d
+	ON f.`ship_mode` = d.`ship_mode`</string>
+		<string>SELECT a.`DateSkey` AS `order_date_skey`
+		, f.`ship_date` AS `ship_date_skey`
+		, b.`customer_skey`
+		, c.`product_skey`
+		, d.`ship_date_skey`
+FROM		
+	(
+	SELECT `order_date`
+		, `ship_date`
+		, `customer_id`
+		, `product_id`
+		, `order_id`
+		, `unit_sales_amout`
+		, `sales_quantity`
+		, `discount_percent`
+		, `extended_sales_amount`
+		, `ship_mode`
+	FROM `sales_transaction`
+	) f
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_date` a
+	ON f.`order_date` = a.`TheDate`
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_customer` b
+	ON f.`customer_id` = b.`customer_id`
+
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_product`c
+	ON f.`product_id` = c.`product_id`	
+	
+LEFT OUTER JOIN
+	`salesmart_db`.`dim_junk` d
+	ON f.`ship_mode` = d.`ship_mode`</string>
+	</array>
+	<key>rdbms_type</key>
+	<string>mysql</string>
+	<key>rdbms_version</key>
+	<string>8.0.19</string>
+	<key>version</key>
+	<integer>1</integer>
+</dict>
+</plist>
